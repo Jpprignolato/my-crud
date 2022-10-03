@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  mysql-mycrud:
+    container_name: mysql-mycrud
+    image: mysql:5.7
+    volumes: 
+      - ./database:/var/lib/mysql
+      - ./docker-config/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql  #!!!
+      - ./docker-config/mysql/docker.cnf:/etc/mysql/conf.d/docker.cnf
+    ports:
+      - "3307:3306"
+    restart: always
+    networks:
+      - default-network
+    command: --init-file /docker-entrypoint-initdb.d/init.sql #!!!
+    environment:
+      MYSQL_ROOT_PASSWORD: 'madeofdust'
+
+
+  node-mycrud:
+    container_name: node-mycrud
+    working_dir: /application
+    image: node:15
+    ports:
+     - "9001:9001"
+    volumes: #!!!
+     - ./backend:/home/node/app
+     - ./backend:/application
+     - ./docker-config/node/start_application.sh:/node/start_application.sh
+    # - my-crud/backend/node_modules/:/home/node/app/
+    restart: always
+    depends_on:
+      - mysql-mycrud
+    networks:
+      - default-network
+    command: /node/start_application.sh #!!!
+
+  nginx-mycrud:
+      container_name: nginx-mycrud
+      #working_dir: /var/www/html/
+      image: nginx:1.22
+      ports:
+        - "8080:80"
+      depends_on:
+        - node-mycrud
+      networks:
+        - default-network
+      volumes:
+        - ./frontend:/var/www/html/
+        - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf
+networks:
+  default-network:
+    driver: bridge
+
+     
+    
